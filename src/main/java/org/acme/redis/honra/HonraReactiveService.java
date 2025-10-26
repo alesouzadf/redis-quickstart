@@ -1,4 +1,4 @@
-package org.acme.redis;
+package org.acme.redis.honra;
 
 import io.quarkus.redis.datasource.ReactiveRedisDataSource;
 import io.quarkus.redis.datasource.hash.ReactiveHashCommands;
@@ -11,58 +11,49 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
+import org.acme.models.SolicitacoesHonra;
+
 @ApplicationScoped
-public class PessoaReactiveService {
+public class HonraReactiveService {
 
-    private final ReactiveHashCommands<String, String, Pessoa> reactiveHash;
+    private final ReactiveHashCommands<String, String, SolicitacoesHonra> reactiveHash;
     private final ReactiveKeyCommands<String> reactiveKey;
-    private static final String CHAVE = "pessoas-reactive";
+    private static final String CHAVE = "honras-reactive";
 
-    public PessoaReactiveService(ReactiveRedisDataSource reactiveRedis) {
-        this.reactiveHash = reactiveRedis.hash(String.class, String.class, Pessoa.class);
+    public HonraReactiveService(ReactiveRedisDataSource reactiveRedis) {
+        this.reactiveHash = reactiveRedis.hash(String.class, String.class, SolicitacoesHonra.class);
         this.reactiveKey = reactiveRedis.key(String.class);
     }
 
-    public Uni<Void> salvar(Pessoa pessoa) {
+    public Uni<Void> salvar(SolicitacoesHonra honra) {
         long segundos = calcularSegundosAteMeiaNoite();
-        return reactiveHash.hset(CHAVE, pessoa.getNome(), pessoa)
+        return reactiveHash.hset(CHAVE, honra.getIdOperacaoAgenteCreditoLivre(), honra)
                 .chain(() -> reactiveKey.expire(CHAVE, Duration.ofSeconds(segundos)))
                 .replaceWithVoid();
     }
 
-    public Uni<Void> salvarTodos(Multi<Pessoa> pessoas) {
+    public Uni<Void> salvarTodos(Multi<SolicitacoesHonra> honras) {
         long segundos = calcularSegundosAteMeiaNoite();
-        return pessoas
-                .onItem().transformToUniAndConcatenate(pessoa -> reactiveHash.hset(CHAVE, pessoa.getNome(), pessoa))
+        return honras
+                .onItem()
+                .transformToUniAndConcatenate(
+                        honra -> reactiveHash.hset(CHAVE, honra.getIdOperacaoAgenteCreditoLivre(), honra))
                 .collect().asList()
                 .chain(__ -> reactiveKey.expire(CHAVE, Duration.ofSeconds(segundos)))
                 .replaceWithVoid();
     }
 
-    public Uni<Pessoa> buscar(String nome) {
-        return reactiveHash.hget(CHAVE, nome);
+    public Uni<SolicitacoesHonra> buscar(String idOperacaoCreditoLivre) {
+        return reactiveHash.hget(CHAVE, idOperacaoCreditoLivre);
     }
 
-    public Multi<Pessoa> listar() {
+    public Multi<SolicitacoesHonra> listar() {
         return reactiveHash.hgetall(CHAVE)
                 .onItem().transformToMulti(map -> Multi.createFrom().items(map.values().stream()));
     }
 
-    // Atualiza um campo específico de uma pessoa (nome, idade, etc.)
-    public Uni<Void> atualizar(String id, String nome, String idade) {
-        return reactiveHash.hget(CHAVE, id)
-                .onItem().ifNull().failWith(() -> new RuntimeException("Pessoa não encontrada"))
-                .onItem().transformToUni(pessoa -> {
-                    if (nome != null)
-                        pessoa.setNome(nome);
-                    if (idade != null)
-                        pessoa.setIdade(idade);
-                    return reactiveHash.hset(CHAVE, id, pessoa).replaceWithVoid();
-                });
-    }
-
-    public Uni<Void> deletar(String nome) {
-        return reactiveHash.hdel(CHAVE, nome).replaceWithVoid();
+    public Uni<Void> deletar(String idOperacaoCreditoLivre) {
+        return reactiveHash.hdel(CHAVE, idOperacaoCreditoLivre).replaceWithVoid();
     }
 
     public Uni<Void> deletarTudo() {

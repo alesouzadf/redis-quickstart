@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.acme.redis.Pessoa;
+import org.acme.models.Pessoa;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -14,7 +14,7 @@ import com.google.gson.GsonBuilder;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
-public class ArquivoService {
+public class ArquivoPessoaService {
 
     public List<Pessoa> lerPessoasDoArquivo() {
         // Caminho ajustado para a pasta src/public

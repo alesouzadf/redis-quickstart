@@ -1,4 +1,4 @@
-package org.acme.redis;
+package org.acme.redis.pessoa;
 
 import io.quarkus.redis.datasource.RedisDataSource;
 import io.quarkus.redis.datasource.hash.HashCommands;
@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import org.acme.models.Pessoa;
 
 @ApplicationScoped
 public class PessoaService {

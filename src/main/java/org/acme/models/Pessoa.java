@@ -1,4 +1,4 @@
-package org.acme.redis;
+package org.acme.models;
 
 public class Pessoa {
     private String nome;

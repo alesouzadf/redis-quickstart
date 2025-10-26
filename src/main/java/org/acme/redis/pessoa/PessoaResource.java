@@ -1,4 +1,4 @@
-package org.acme.redis;
+package org.acme.redis.pessoa;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -6,7 +6,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
 
-import org.acme.arquivo.ArquivoService;
+import org.acme.arquivo.ArquivoPessoaService;
+import org.acme.models.Pessoa;
 
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
@@ -17,7 +18,7 @@ import io.smallrye.mutiny.Uni;
 public class PessoaResource {
 
     @Inject
-    ArquivoService arquivoService;
+    ArquivoPessoaService arquivoService;
 
     private final PessoaService pessoaService;
     private final PessoaReactiveService pessoaReactiveService;
