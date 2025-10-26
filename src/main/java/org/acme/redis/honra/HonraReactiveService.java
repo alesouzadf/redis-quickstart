@@ -4,17 +4,23 @@ import io.quarkus.redis.datasource.ReactiveRedisDataSource;
 import io.quarkus.redis.datasource.hash.ReactiveHashCommands;
 import io.quarkus.redis.datasource.keys.ReactiveKeyCommands;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.Multi;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.acme.arquivo.ArquivoSolicitacoesService;
 import org.acme.models.SolicitacoesHonra;
 
 @ApplicationScoped
 public class HonraReactiveService {
+
+    @Inject
+    ArquivoSolicitacoesService serviceArquivo;
 
     private final ReactiveHashCommands<String, String, SolicitacoesHonra> reactiveHash;
     private final ReactiveKeyCommands<String> reactiveKey;
@@ -48,8 +54,33 @@ public class HonraReactiveService {
     }
 
     public Multi<SolicitacoesHonra> listar() {
-        return reactiveHash.hgetall(CHAVE)
-                .onItem().transformToMulti(map -> Multi.createFrom().items(map.values().stream()));
+        // Função para ler o Hash do Redis e desserializar os valores
+        // Esta lógica é comum para os casos de Cache Hit e Cache Miss (após o
+        // salvamento)
+        Uni<List<SolicitacoesHonra>> readAndDeserialize = reactiveHash.hgetall(CHAVE)
+                .onItem().transform(map -> map.values().stream()
+                        // NECESSÁRIO: Conversão do valor (String/byte[]) do Redis para o objeto
+                        // SolicitacoesHonra
+                        .map(this::deserialize)
+                        .collect(Collectors.toList()));
+
+        return reactiveHash.hlen(CHAVE)
+                .onItem().transformToMulti(len -> {
+                    if (len == 0L) {
+                        List<SolicitacoesHonra> honras = serviceArquivo.lerArquivoTxt();
+                        // 1. Chama salvarTodos e obtém o Uni<Void>
+                        Uni<Void> saveOperation = salvarTodos(Multi.createFrom().items(honras.stream()));
+
+                        // 2. Encadear a leitura: .onItem().transformToMulti() garante que
+                        // a leitura só comece APÓS a conclusão (Void) do Uni de salvamento.
+                        return saveOperation
+                                .onItem().transformToMulti(
+                                        v -> readAndDeserialize.onItem()
+                                                .transformToMulti(list -> Multi.createFrom().items(list.stream())));
+                    }
+                    return reactiveHash.hgetall(CHAVE)
+                            .onItem().transformToMulti(map -> Multi.createFrom().items(map.values().stream()));
+                });
     }
 
     public Uni<Void> deletar(String idOperacaoCreditoLivre) {
@@ -66,6 +97,12 @@ public class HonraReactiveService {
 
     public Uni<Long> buscaDuracaokey() {
         return reactiveKey.ttl(CHAVE);
+    }
+
+    // No-op deserializer: values coming from Redis are already mapped as
+    // SolicitacoesHonra
+    private SolicitacoesHonra deserialize(SolicitacoesHonra raw) {
+        return raw;
     }
 
     private long calcularSegundosAteMeiaNoite() {

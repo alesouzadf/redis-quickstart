@@ -5,10 +5,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
-
-import org.acme.arquivo.ArquivoPessoaService;
 import org.acme.arquivo.ArquivoSolicitacoesService;
-import org.acme.models.Pessoa;
 import org.acme.models.SolicitacoesHonra;
 
 import io.smallrye.mutiny.Multi;
@@ -51,7 +48,7 @@ public class HonraResource {
      * Lista todas as solicitacoes (modo reativo).
      */
     @GET
-    @Path("/reactive")
+    @Path("/reactive/lista")
     public Uni<List<SolicitacoesHonra>> listarReactive() {
         return honraReactiveService.listar().collect().asList();
     }
