@@ -74,6 +74,12 @@ public class HonraResource {
         return honraReactiveService.deletar(idOperacaoCreditoLivre).replaceWith(Response.noContent().build());
     }
 
+    @GET
+    @Path("/reactive/{operacao}")
+    public Uni<SolicitacoesHonra> buscarOperacao(@PathParam("operadao") String operacao) {
+        return honraReactiveService.buscar(operacao);
+    }
+
     /**
      * Deleta todas as solicitacoes (modo reativo).
      */

@@ -40,17 +40,25 @@ public class HonraReactiveService {
 
     public Uni<Void> salvarTodos(Multi<SolicitacoesHonra> honras) {
         long segundos = calcularSegundosAteMeiaNoite();
+
         return honras
                 .onItem()
-                .transformToUniAndConcatenate(
-                        honra -> reactiveHash.hset(CHAVE, honra.getIdOperacaoAgenteCreditoLivre(), honra))
-                .collect().asList()
-                .chain(__ -> reactiveKey.expire(CHAVE, Duration.ofSeconds(segundos)))
-                .replaceWithVoid();
+                .transformToUniAndConcatenate(honra -> {
+                    String chave = "00000000000000000000".equals(honra.getIdOperacaoAgenteCreditoLivre())
+                            ? honra.getContratoRepasse()
+                            : honra.getIdOperacaoAgenteCreditoLivre();
+
+                    // Retorna o Uni resultante do hset
+                    return reactiveHash.hset(CHAVE, chave, honra);
+                })
+                .collect()
+                .asList() // Aguarda o processamento de todos os itens
+                .chain(__ -> reactiveKey.expire(CHAVE, Duration.ofSeconds(segundos))) // Define expiração até meia-noite
+                .replaceWithVoid(); // Converte para Uni<Void>
     }
 
-    public Uni<SolicitacoesHonra> buscar(String idOperacaoCreditoLivre) {
-        return reactiveHash.hget(CHAVE, idOperacaoCreditoLivre);
+    public Uni<SolicitacoesHonra> buscar(String operacao) {
+        return reactiveHash.hget(CHAVE, operacao);
     }
 
     public Multi<SolicitacoesHonra> listar() {
@@ -83,8 +91,8 @@ public class HonraReactiveService {
                 });
     }
 
-    public Uni<Void> deletar(String idOperacaoCreditoLivre) {
-        return reactiveHash.hdel(CHAVE, idOperacaoCreditoLivre).replaceWithVoid();
+    public Uni<Void> deletar(String operacao) {
+        return reactiveHash.hdel(CHAVE, operacao).replaceWithVoid();
     }
 
     public Uni<Void> deletarTudo() {
