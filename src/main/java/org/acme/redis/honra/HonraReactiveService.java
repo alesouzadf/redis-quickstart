@@ -58,7 +58,10 @@ public class HonraReactiveService {
     }
 
     public Uni<SolicitacoesHonra> buscar(String operacao) {
-        return reactiveHash.hget(CHAVE, operacao);
+        return reactiveHash.hget(CHAVE, operacao)
+                .onItem()
+                .ifNull()
+                .failWith(() -> new RuntimeException("Solicitação não encontrada para a operacao: " + operacao));
     }
 
     public Multi<SolicitacoesHonra> listar() {

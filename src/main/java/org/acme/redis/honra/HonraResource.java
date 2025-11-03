@@ -76,8 +76,12 @@ public class HonraResource {
 
     @GET
     @Path("/reactive/{operacao}")
-    public Uni<SolicitacoesHonra> buscarOperacao(@PathParam("operadao") String operacao) {
-        return honraReactiveService.buscar(operacao);
+    public Uni<Response> buscarOperacao(@PathParam("operacao") String operacao) {
+        System.out.println("Operacao: " + operacao);
+        return honraReactiveService.buscar(operacao).onItem().transform(honra -> Response.ok(honra).build())
+                .onFailure().recoverWithItem(erro -> Response.status(Response.Status.NOT_FOUND)
+                        .entity(new MensagemErro("Solicitação não encontrada", erro.getMessage()))
+                        .build());
     }
 
     /**
@@ -88,4 +92,15 @@ public class HonraResource {
     public Uni<Response> deletarTudoReactive() {
         return honraReactiveService.deletarTudo().replaceWith(Response.noContent().build());
     }
+
+    // Classe simples para retornar mensagens de erro padronizadas
+    public static class MensagemErro {
+        public String mensagem;
+        public String detalhe;
+
+        public MensagemErro(String mensagem, String detalhe) {
+            this.mensagem = mensagem;
+            this.detalhe = detalhe;
+        }
+    };
 }
